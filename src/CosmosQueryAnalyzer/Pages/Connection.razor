@@ -1,0 +1,96 @@
+﻿@page "/"
+@page "/connection"
+
+@using CosmosQueryAnalyzer.Services
+@using CosmosQueryAnalyzer.Models
+
+@implements IDisposable
+
+@inject CosmosContainerService CosmosContainer
+
+<PageTitle>Connection</PageTitle>
+
+<MudTextField 
+    ReadOnly="@(_connectionState != Models.ConnectionState.Disconnected)" 
+    @bind-Value="_connectionString" 
+    Label="Connection String" 
+    InputType="@_connectionStringInputType" 
+    Adornment="Adornment.End" 
+    AdornmentIcon="@_connectionStringInputIcon" 
+    OnAdornmentClick="ShowConnectionString" 
+    AdornmentAriaLabel="Show Connection String" />
+
+<MudButton 
+    Disabled="@(_connectionState != Models.ConnectionState.Disconnected)"
+    OnClick="@(() => CosmosContainer.Connect(_connectionString))"
+    Color="Color.Primary">
+
+    @if (_connectionState == Models.ConnectionState.Connecting)
+    {
+        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+        <MudText Class="ms-2">Connecting</MudText>
+    }
+    else if (_connectionState == Models.ConnectionState.Connected)
+    {
+        <MudText>Connected</MudText>
+    }
+    else
+    {
+        <MudText>Connect</MudText>
+    }
+
+</MudButton>
+
+@code {
+    private bool _disposed = false;
+    private IDisposable? _connectionStateSubscription = null;
+
+    private ConnectionState _connectionState = ConnectionState.Disconnected;
+
+    private string _connectionString = string.Empty;
+    private InputType _connectionStringInputType = InputType.Password;
+    private string _connectionStringInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    protected override void OnInitialized(){
+        _connectionStateSubscription = CosmosContainer.ConnectionStateObservable
+            .DistinctUntilChanged()
+            .Subscribe((connectionState) => {
+                _connectionState = connectionState;
+                StateHasChanged();
+            });
+    }
+
+    void ShowConnectionString()
+    {
+        @if (_connectionStringInputType == InputType.Text)
+        {
+            _connectionStringInputIcon = Icons.Material.Filled.VisibilityOff;
+            _connectionStringInputType = InputType.Password;
+        }
+        else {
+            _connectionStringInputIcon = Icons.Material.Filled.Visibility;
+            _connectionStringInputType = InputType.Text;
+        }
+    }
+
+    // Public implementation of Dispose pattern callable by consumers.
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    // Protected implementation of Dispose pattern.
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _connectionStateSubscription?.Dispose();
+                _connectionStateSubscription = null;
+            }
+            _disposed = true;
+        }
+    }
+}
