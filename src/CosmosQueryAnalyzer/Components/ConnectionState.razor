@@ -1,0 +1,52 @@
+﻿@using CosmosQueryAnalyzer.Services
+
+@implements IDisposable
+
+@inject CosmosContainerService CosmosContainer
+
+<MudStack Row="true" class="ml-2 justify-end gap-2">
+    <MudText>Connection State:</MudText>
+    <MudIcon Icon=@Icons.Material.Filled.Cable Color=@_connectionColor/>
+</MudStack>
+
+@code{
+    private bool _disposed = false;
+    private IDisposable? _connectionStateSubscription = null;
+    private Color _connectionColor = Color.Error;
+    
+    protected override void OnInitialized(){
+        _connectionStateSubscription = CosmosContainer.ConnectionStateObservable
+            .DistinctUntilChanged()
+            .Subscribe((connectionState) => {
+                Console.WriteLine($"Connection State Changed: {connectionState}");
+                _connectionColor = connectionState switch {
+                    Models.ConnectionState.Connected => Color.Success,
+                    Models.ConnectionState.Connecting => Color.Warning,
+                    Models.ConnectionState.Disconnected => Color.Error,
+                    _ => throw new ArgumentOutOfRangeException(nameof(connectionState), $"Unknown connection state: {connectionState}")
+                };
+                StateHasChanged();
+            });
+    }
+
+    // Public implementation of Dispose pattern callable by consumers.
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    // Protected implementation of Dispose pattern.
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _connectionStateSubscription?.Dispose();
+                _connectionStateSubscription = null;
+            }
+            _disposed = true;
+        }
+    }
+}

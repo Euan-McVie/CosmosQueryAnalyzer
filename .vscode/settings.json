@@ -1,0 +1,6 @@
+{
+    "dotnet.defaultSolution": "CosmosQueryAnalyzer.sln",
+    "cSpell.words": [
+        "Blazor"
+    ]
+}
